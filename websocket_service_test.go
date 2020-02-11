@@ -2,8 +2,9 @@ package binance
 
 import (
 	"errors"
-	"github.com/stretchr/testify/suite"
 	"testing"
+
+	"github.com/stretchr/testify/suite"
 )
 
 type websocketServiceTestSuite struct {
@@ -257,6 +258,80 @@ func (s *websocketServiceTestSuite) assertWsDepthEventEqual(e, a *WsDepthEvent) 
 		r.Equal(e.Asks[i].Price, a.Asks[i].Price, "Price")
 		r.Equal(e.Asks[i].Quantity, a.Asks[i].Quantity, "Quantity")
 	}
+}
+
+func (s *websocketServiceTestSuite) TestBookTickerServe() {
+	data := []byte(`{
+        "u": 7913455,
+        "s": "ETHBTC",
+		"b": "0.10376590",
+		"B": "59.15767010",
+		"a": "0.10376586",
+		"A": "159.15767010"
+    }`)
+	fakeErrMsg := "fake error"
+	s.mockWsServe(data, errors.New(fakeErrMsg))
+	defer s.assertWsServe()
+
+	doneC, stopC, err := WsBookTickerServe("ETHBTC", func(event *WsBookTickerEvent) {
+		e := &WsBookTickerEvent{
+			UpdateID:    7913455,
+			Symbol:      "ETHBTC",
+			BidPrice:    "0.10376590",
+			BidQuantity: "59.15767010",
+			AskPrice:    "0.10376586",
+			AskQuantity: "159.15767010",
+		}
+
+		s.assertWsBookTickerEqual(e, event)
+	}, func(err error) {
+		s.r().EqualError(err, fakeErrMsg)
+	})
+	s.r().NoError(err)
+	stopC <- struct{}{}
+	<-doneC
+}
+
+func (s *websocketServiceTestSuite) TestAllBookTickerServe() {
+	data := []byte(`{
+        "u": 7913455,
+        "s": "ETHBTC",
+		"b": "0.10376590",
+		"B": "59.15767010",
+		"a": "0.10376586",
+		"A": "159.15767010"
+    }`)
+	fakeErrMsg := "fake error"
+	s.mockWsServe(data, errors.New(fakeErrMsg))
+	defer s.assertWsServe()
+
+	doneC, stopC, err := WsAllBookTickerServe(func(event *WsBookTickerEvent) {
+		e := &WsBookTickerEvent{
+			UpdateID:    7913455,
+			Symbol:      "ETHBTC",
+			BidPrice:    "0.10376590",
+			BidQuantity: "59.15767010",
+			AskPrice:    "0.10376586",
+			AskQuantity: "159.15767010",
+		}
+
+		s.assertWsBookTickerEqual(e, event)
+	}, func(err error) {
+		s.r().EqualError(err, fakeErrMsg)
+	})
+	s.r().NoError(err)
+	stopC <- struct{}{}
+	<-doneC
+}
+
+func (s *websocketServiceTestSuite) assertWsBookTickerEqual(e, a *WsBookTickerEvent) {
+	r := s.r()
+	r.Equal(e.UpdateID, a.UpdateID, "UpdateID")
+	r.Equal(e.Symbol, a.Symbol, "Symbol")
+	r.Equal(e.BidPrice, a.BidPrice, "BidPrice")
+	r.Equal(e.BidQuantity, a.BidQuantity, "BidQuantity")
+	r.Equal(e.AskPrice, a.AskPrice, "AskPrice")
+	r.Equal(e.AskQuantity, a.AskQuantity, "AskQuantity")
 }
 
 func (s *websocketServiceTestSuite) TestKlineServe() {
