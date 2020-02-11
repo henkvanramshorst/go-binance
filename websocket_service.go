@@ -161,6 +161,63 @@ type WsDepthEvent struct {
 	Asks          []Ask  `json:"a"`
 }
 
+// WsBookTickerEvent define websocket book ticker event
+type WsBookTickerEvent struct {
+	UpdateID    int64  `json:"u"`
+	Symbol      string `json:"s"`
+	BidPrice    string `json:"b"`
+	BidQuantity string `json:"B"`
+	AskPrice    string `json:"a"`
+	AskQuantity string `json:"A"`
+}
+
+// WsBookTickerHandler handle websocket book ticker event
+type WsBookTickerHandler func(event *WsBookTickerEvent)
+
+// WsBookTickerServe serve websocket book ticker handler with a symbol
+func WsBookTickerServe(symbol string, handler WsBookTickerHandler, errHandler ErrHandler) (doneC, stopC chan struct{}, err error) {
+	endpoint := fmt.Sprintf("%s/%s@bookTicker", baseURL, strings.ToLower(symbol))
+	cfg := newWsConfig(endpoint)
+	wsHandler := func(message []byte) {
+		j, err := newJSON(message)
+		if err != nil {
+			errHandler(err)
+			return
+		}
+		event := new(WsBookTickerEvent)
+		event.UpdateID = j.Get("u").MustInt64()
+		event.Symbol = j.Get("s").MustString()
+		event.BidPrice = j.Get("b").MustString()
+		event.BidQuantity = j.Get("B").MustString()
+		event.AskPrice = j.Get("a").MustString()
+		event.AskQuantity = j.Get("A").MustString()
+		handler(event)
+	}
+	return wsServe(cfg, wsHandler, errHandler)
+}
+
+// WsAllBookTickerServe serve websocket book ticker handler
+func WsAllBookTickerServe(handler WsBookTickerHandler, errHandler ErrHandler) (doneC, stopC chan struct{}, err error) {
+	endpoint := fmt.Sprintf("%s/!bookTicker", baseURL)
+	cfg := newWsConfig(endpoint)
+	wsHandler := func(message []byte) {
+		j, err := newJSON(message)
+		if err != nil {
+			errHandler(err)
+			return
+		}
+		event := new(WsBookTickerEvent)
+		event.UpdateID = j.Get("u").MustInt64()
+		event.Symbol = j.Get("s").MustString()
+		event.BidPrice = j.Get("b").MustString()
+		event.BidQuantity = j.Get("B").MustString()
+		event.AskPrice = j.Get("a").MustString()
+		event.AskQuantity = j.Get("A").MustString()
+		handler(event)
+	}
+	return wsServe(cfg, wsHandler, errHandler)
+}
+
 // WsKlineHandler handle websocket kline event
 type WsKlineHandler func(event *WsKlineEvent)
 
