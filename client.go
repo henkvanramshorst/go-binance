@@ -177,6 +177,7 @@ type Client struct {
 	HTTPClient *http.Client
 	Debug      bool
 	Logger     *log.Logger
+	TimeOffset int64
 	do         doFunc
 }
 
@@ -201,7 +202,7 @@ func (c *Client) parseRequest(r *request, opts ...RequestOption) (err error) {
 		r.setParam(recvWindowKey, r.recvWindow)
 	}
 	if r.secType == secTypeSigned {
-		r.setParam(timestampKey, currentTimestamp())
+		r.setParam(timestampKey, currentTimestamp()-c.TimeOffset)
 	}
 	queryString := r.query.Encode()
 	body := &bytes.Buffer{}
@@ -298,6 +299,11 @@ func (c *Client) NewServerTimeService() *ServerTimeService {
 	return &ServerTimeService{c: c}
 }
 
+// NewSetServerTimeService init set server time service
+func (c *Client) NewSetServerTimeService() *SetServerTimeService {
+	return &SetServerTimeService{c: c}
+}
+
 // NewDepthService init depth service
 func (c *Client) NewDepthService() *DepthService {
 	return &DepthService{c: c}
@@ -338,6 +344,11 @@ func (c *Client) NewCreateOrderService() *CreateOrderService {
 	return &CreateOrderService{c: c}
 }
 
+// NewCreateOCOService init creating OCO service
+func (c *Client) NewCreateOCOService() *CreateOCOService {
+	return &CreateOCOService{c: c}
+}
+
 // NewGetOrderService init get order service
 func (c *Client) NewGetOrderService() *GetOrderService {
 	return &GetOrderService{c: c}
@@ -361,6 +372,11 @@ func (c *Client) NewListOrdersService() *ListOrdersService {
 // NewGetAccountService init getting account service
 func (c *Client) NewGetAccountService() *GetAccountService {
 	return &GetAccountService{c: c}
+}
+
+// NewGetAccountSnapshotService init getting account snapshot service
+func (c *Client) NewGetAccountSnapshotService() *GetAccountSnapshotService {
+	return &GetAccountSnapshotService{c: c}
 }
 
 // NewListTradesService init listing trades service
